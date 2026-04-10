@@ -7,20 +7,35 @@ declare global {
   var __subbasePrisma__: PrismaClient | undefined;
 }
 
-const adapter = process.env.DATABASE_URL
-  ? new PrismaPg(process.env.DATABASE_URL)
-  : undefined;
+function createPrismaClient() {
+  const databaseUrl = process.env.DATABASE_URL;
 
-export const prisma =
-  globalThis.__subbasePrisma__ ??
-  new PrismaClient({
-    adapter,
+  if (!databaseUrl) {
+    throw new Error("DATABASE_URL is required to initialize Prisma.");
+  }
+
+  return new PrismaClient({
+    adapter: new PrismaPg(databaseUrl),
     log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
   });
-
-if (process.env.NODE_ENV !== "production") {
-  globalThis.__subbasePrisma__ = prisma;
 }
+
+function getPrismaClient() {
+  if (!globalThis.__subbasePrisma__) {
+    globalThis.__subbasePrisma__ = createPrismaClient();
+  }
+
+  return globalThis.__subbasePrisma__;
+}
+
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    const client = getPrismaClient();
+    const value = Reflect.get(client, prop, client);
+
+    return typeof value === "function" ? value.bind(client) : value;
+  },
+});
 
 export const db = prisma;
 

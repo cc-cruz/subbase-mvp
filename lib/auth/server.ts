@@ -4,22 +4,24 @@ import { createHash } from "node:crypto";
 
 import { createNeonAuth } from "@neondatabase/auth/next/server";
 
-import { getEnv } from "@/lib/env";
-
 function getNeonAuthBaseUrl() {
-  const env = getEnv();
-
-  return env.NEON_AUTH_BASE_URL ?? env.NEON_AUTH_URL ?? "";
+  return (
+    process.env.NEON_AUTH_BASE_URL ??
+    process.env.NEON_AUTH_URL ??
+    "https://example.invalid/neondb/auth"
+  );
 }
 
 function getNeonAuthCookieSecret() {
-  const env = getEnv();
+  const explicitSecret = process.env.NEON_AUTH_COOKIE_SECRET;
 
-  if (env.NEON_AUTH_COOKIE_SECRET) {
-    return env.NEON_AUTH_COOKIE_SECRET;
+  if (explicitSecret) {
+    return explicitSecret;
   }
 
-  return createHash("sha256").update(env.ENCRYPTION_KEY).digest("hex");
+  return createHash("sha256")
+    .update(process.env.ENCRYPTION_KEY ?? "subbase-neon-auth-build-secret")
+    .digest("hex");
 }
 
 export const auth = createNeonAuth({
