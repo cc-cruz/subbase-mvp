@@ -1,4 +1,6 @@
-export type OrganizationRole = "ADMIN" | "MANAGER" | "FOREMAN";
+export const organizationRoleValues = ["ADMIN", "MANAGER", "FOREMAN"] as const;
+
+export type OrganizationRole = (typeof organizationRoleValues)[number];
 
 export const workspacePermissions = [
   "workspace:view",
@@ -47,6 +49,15 @@ const rolePriority: Record<OrganizationRole, number> = {
   ADMIN: 3,
 };
 
+const legacyRoleAliases: Record<string, OrganizationRole> = {
+  OWNER: "ADMIN",
+  MEMBER: "FOREMAN",
+};
+
+function normalizeEnumLikeValue(value: string) {
+  return value.trim().replace(/[\s-]+/g, "_").toUpperCase();
+}
+
 export function getPermissionsForRole(role: OrganizationRole) {
   return permissionMap[role];
 }
@@ -56,7 +67,11 @@ export function getResolvedPermissions(role: OrganizationRole) {
 }
 
 export function asOrganizationRole(role: string): OrganizationRole {
-  const normalized = role.toUpperCase();
+  const normalized = normalizeEnumLikeValue(role);
+
+  if (normalized in legacyRoleAliases) {
+    return legacyRoleAliases[normalized];
+  }
 
   if (normalized === "ADMIN" || normalized === "MANAGER" || normalized === "FOREMAN") {
     return normalized;

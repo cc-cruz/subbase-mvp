@@ -1,8 +1,13 @@
 import "server-only";
 
 import { prisma } from "@/lib/db/client";
-import type { CreateProjectInput, UpdateProjectInput } from "@/lib/domain/projects/schemas";
-import { conflict, notFound } from "@/lib/api/errors";
+import type {
+  CreateProjectContactInput,
+  CreateProjectInput,
+  UpdateProjectContactInput,
+  UpdateProjectInput,
+} from "@/lib/domain/projects/schemas";
+import { badRequest, conflict, notFound } from "@/lib/api/errors";
 import { toSlug } from "@/lib/validation/common";
 
 async function ensureProjectSlug({
@@ -78,6 +83,52 @@ async function findOrCreateGcCompany({
   });
 }
 
+async function getProjectForMutation({
+  organizationId,
+  projectId,
+}: {
+  organizationId: string;
+  projectId: string;
+}) {
+  return prisma.project.findFirst({
+    where: {
+      id: projectId,
+      organizationId,
+    },
+    include: {
+      gcCompany: true,
+    },
+  });
+}
+
+function resolveProjectContactCompanyName({
+  requestedCompanyName,
+  isGcContact,
+  gcCompanyName,
+  currentCompanyName,
+}: {
+  requestedCompanyName?: string;
+  isGcContact: boolean;
+  gcCompanyName?: string | null;
+  currentCompanyName?: string;
+}) {
+  if (isGcContact) {
+    if (!gcCompanyName) {
+      throw badRequest("Link a GC company to the project before marking a contact as the GC contact.");
+    }
+
+    return gcCompanyName;
+  }
+
+  const companyName = requestedCompanyName ?? currentCompanyName;
+
+  if (!companyName) {
+    throw badRequest("Company name is required for project contacts.");
+  }
+
+  return companyName;
+}
+
 export async function createProject({
   organizationId,
   input,
@@ -127,11 +178,9 @@ export async function updateProject({
   projectId: string;
   input: UpdateProjectInput;
 }) {
-  const existing = await prisma.project.findFirst({
-    where: {
-      id: projectId,
-      organizationId,
-    },
+  const existing = await getProjectForMutation({
+    organizationId,
+    projectId,
   });
 
   if (!existing) {
@@ -156,21 +205,185 @@ export async function updateProject({
         })
       : undefined;
 
-  return prisma.project.update({
-    where: { id: existing.id },
+  return prisma.$transaction(async (tx) => {
+    await tx.project.update({
+      where: { id: existing.id },
+      data: {
+        gcCompanyId: gcCompany ? gcCompany.id : input.gcCompanyName === undefined ? undefined : null,
+        name: input.name,
+        slug,
+        status: input.status,
+        source: input.source,
+        projectAddress: input.projectAddress,
+        city: input.city,
+        state: input.state,
+        postalCode: input.postalCode,
+        startDate: input.startDate ? new Date(input.startDate) : input.startDate === undefined ? undefined : null,
+        endDate: input.endDate ? new Date(input.endDate) : input.endDate === undefined ? undefined : null,
+        notes: input.notes,
+      },
+    });
+
+    if (input.gcCompanyName !== undefined) {
+      if (gcCompany?.name) {
+        await tx.projectContact.updateMany({
+          where: {
+            projectId: existing.id,
+            isGcContact: true,
+          },
+          data: {
+            companyName: gcCompany.name,
+          },
+        });
+      } else {
+        await tx.projectContact.updateMany({
+          where: {
+            projectId: existing.id,
+            isGcContact: true,
+          },
+          data: {
+            isGcContact: false,
+          },
+        });
+      }
+    }
+
+    const updatedProject = await tx.project.findUnique({
+      where: { id: existing.id },
+      include: {
+        gcCompany: true,
+        contacts: {
+          orderBy: [{ isGcContact: "desc" }, { updatedAt: "desc" }, { name: "asc" }],
+        },
+      },
+    });
+
+    if (!updatedProject) {
+      throw notFound("Project not found.");
+    }
+
+    return updatedProject;
+  });
+}
+
+export async function createProjectContact({
+  organizationId,
+  projectId,
+  input,
+}: {
+  organizationId: string;
+  projectId: string;
+  input: CreateProjectContactInput;
+}) {
+  const project = await getProjectForMutation({
+    organizationId,
+    projectId,
+  });
+
+  if (!project) {
+    throw notFound("Project not found.");
+  }
+
+  return prisma.projectContact.create({
     data: {
-      gcCompanyId: gcCompany ? gcCompany.id : input.gcCompanyName === undefined ? undefined : null,
+      projectId: project.id,
       name: input.name,
-      slug,
-      status: input.status,
-      source: input.source,
-      projectAddress: input.projectAddress,
-      city: input.city,
-      state: input.state,
-      postalCode: input.postalCode,
-      startDate: input.startDate ? new Date(input.startDate) : input.startDate === undefined ? undefined : null,
-      endDate: input.endDate ? new Date(input.endDate) : input.endDate === undefined ? undefined : null,
-      notes: input.notes,
+      companyName: resolveProjectContactCompanyName({
+        requestedCompanyName: input.companyName,
+        isGcContact: input.isGcContact,
+        gcCompanyName: project.gcCompany?.name,
+      }),
+      email: input.email,
+      phone: input.phone,
+      role: input.role,
+      isGcContact: input.isGcContact,
+    },
+  });
+}
+
+export async function updateProjectContact({
+  organizationId,
+  projectId,
+  contactId,
+  input,
+}: {
+  organizationId: string;
+  projectId: string;
+  contactId: string;
+  input: UpdateProjectContactInput;
+}) {
+  const existing = await prisma.projectContact.findFirst({
+    where: {
+      id: contactId,
+      projectId,
+      project: {
+        organizationId,
+      },
+    },
+    include: {
+      project: {
+        include: {
+          gcCompany: true,
+        },
+      },
+    },
+  });
+
+  if (!existing) {
+    throw notFound("Project contact not found.");
+  }
+
+  const isGcContact = input.isGcContact ?? existing.isGcContact;
+
+  return prisma.projectContact.update({
+    where: {
+      id: existing.id,
+    },
+    data: {
+      name: input.name,
+      companyName: resolveProjectContactCompanyName({
+        requestedCompanyName: input.companyName,
+        currentCompanyName: existing.companyName,
+        isGcContact,
+        gcCompanyName: existing.project.gcCompany?.name,
+      }),
+      email: input.email,
+      phone: input.phone,
+      role: input.role,
+      isGcContact,
+    },
+  });
+}
+
+export async function deleteProjectContact({
+  organizationId,
+  projectId,
+  contactId,
+}: {
+  organizationId: string;
+  projectId: string;
+  contactId: string;
+}) {
+  const existing = await prisma.projectContact.findFirst({
+    where: {
+      id: contactId,
+      projectId,
+      project: {
+        organizationId,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!existing) {
+    throw notFound("Project contact not found.");
+  }
+
+  await prisma.projectContact.delete({
+    where: {
+      id: existing.id,
     },
   });
 }

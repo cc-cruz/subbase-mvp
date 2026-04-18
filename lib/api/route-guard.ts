@@ -54,7 +54,10 @@ export async function requireOrgRouteContext({
   return {
     currentUser,
     organization: membership.organization,
-    membership,
+    membership: {
+      ...membership,
+      role: normalizedRole,
+    },
     permissions: getResolvedPermissions(normalizedRole),
   };
 }
