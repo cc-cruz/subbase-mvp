@@ -148,6 +148,15 @@ export default async function WorkspaceOverviewPage({
                   {members.length} active team members and {pendingInvites.length} pending invites.
                 </p>
               </Link>
+              <Link
+                href={`/workspace/${orgSlug}/invoices`}
+                className="block border-2 border-border bg-background px-4 py-4 transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <p className="font-semibold">Invoices</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Check QuickBooks readiness before reserving persistent invoice sync state.
+                </p>
+              </Link>
             </CardContent>
           </div>
         </Card>

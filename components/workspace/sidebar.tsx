@@ -9,6 +9,7 @@ const navItems = [
   { label: "Overview", path: "" },
   { label: "Projects", path: "/projects" },
   { label: "Compliance", path: "/compliance" },
+  { label: "Invoices", path: "/invoices" },
   { label: "Company", path: "/settings/company" },
   { label: "Members", path: "/settings/members" },
 ] as const;
