@@ -1,7 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/workspace/empty-state";
-import type { ReadOnlyInvoicePreviewItem } from "@/lib/domain/invoices/queries";
+import type {
+  PersistedInvoiceListItem,
+  ReadOnlyInvoicePreviewItem,
+} from "@/lib/domain/invoices/queries";
 
 function formatDate(value: string | null) {
   if (!value) {
@@ -14,10 +17,17 @@ function formatDate(value: string | null) {
 }
 
 function formatCurrency(value: number, currency: string) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency === "USD" ? "USD" : "USD",
-  }).format(value);
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency || "USD",
+    }).format(value);
+  } catch {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(value);
+  }
 }
 
 const statusLabelMap: Record<ReadOnlyInvoicePreviewItem["statusLabel"], string> = {
@@ -27,7 +37,8 @@ const statusLabelMap: Record<ReadOnlyInvoicePreviewItem["statusLabel"], string> 
 };
 
 type InvoicePreviewListProps = {
-  items: ReadOnlyInvoicePreviewItem[];
+  persistedItems: PersistedInvoiceListItem[];
+  previewItems: ReadOnlyInvoicePreviewItem[];
   totalCount: number | null;
   previewState:
     | "not_connected"
@@ -38,10 +49,82 @@ type InvoicePreviewListProps = {
 };
 
 export function InvoicePreviewList({
-  items,
+  persistedItems,
+  previewItems,
   totalCount,
   previewState,
 }: InvoicePreviewListProps) {
+  if (persistedItems.length > 0) {
+    return (
+      <Card className="border-4 border-border">
+        <CardHeader>
+          <CardTitle>Synced invoices</CardTitle>
+          <CardDescription>
+            Saved QuickBooks invoices in SubBase. Accounting fields refresh from
+            QuickBooks; follow-up and GC status stay owned by SubBase.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3">
+            {persistedItems.map((invoice) => (
+              <div
+                key={invoice.id}
+                className="rounded-xl border-2 border-border bg-background px-4 py-4"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold">{invoice.invoiceNumber}</p>
+                      <Badge variant={invoice.statusLabel === "paid" ? "secondary" : "outline"}>
+                        {statusLabelMap[invoice.statusLabel]}
+                      </Badge>
+                      <Badge variant="outline">
+                        follow-up {invoice.followUpStatus.replaceAll("_", " ")}
+                      </Badge>
+                      <Badge variant="outline">
+                        gc {invoice.gcStatus.replaceAll("_", " ")}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{invoice.customerName}</p>
+                    <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                      <span>Txn date {formatDate(invoice.txnDate)}</span>
+                      <span>Due {formatDate(invoice.dueDate)}</span>
+                    </div>
+                    {invoice.note ? <p className="text-sm">{invoice.note}</p> : null}
+                  </div>
+
+                  <div className="min-w-[180px] space-y-1 text-sm">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">Total</span>
+                      <span className="font-medium">
+                        {formatCurrency(invoice.totalAmount, invoice.currency)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">Balance</span>
+                      <span className="font-medium">
+                        {formatCurrency(invoice.balance, invoice.currency)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">Last synced</span>
+                      <span className="text-right">
+                        {new Intl.DateTimeFormat("en-US", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        }).format(new Date(invoice.lastSyncedAt))}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (previewState !== "read_only_preview") {
     return (
       <Card className="border-4 border-border">
@@ -54,8 +137,8 @@ export function InvoicePreviewList({
         </CardHeader>
         <CardContent>
           <EmptyState
-            title="Read-only invoice preview not available yet"
-            description="This workspace is still at the invoice-readiness stage. Once QuickBooks preview succeeds, live invoice rows will render here."
+            title="No synced invoices yet"
+            description="Run the QuickBooks invoice sync after connecting QuickBooks. Until then, this page can only show readiness and preview state."
           />
         </CardContent>
       </Card>
@@ -67,21 +150,21 @@ export function InvoicePreviewList({
       <CardHeader>
         <CardTitle>QuickBooks invoice preview</CardTitle>
         <CardDescription>
-          Read-only preview of the first {items.length}
+          Read-only preview of the first {previewItems.length}
           {typeof totalCount === "number" ? ` of ${totalCount}` : ""} invoices returned
           directly from QuickBooks. This does not persist follow-up state inside
           SubBase.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {items.length === 0 ? (
+        {previewItems.length === 0 ? (
           <EmptyState
             title="No invoices returned"
             description="QuickBooks is connected, but the preview query did not return any invoices in the first page."
           />
         ) : (
           <div className="grid gap-3">
-            {items.map((invoice) => (
+            {previewItems.map((invoice) => (
               <div
                 key={invoice.externalId}
                 className="rounded-xl border-2 border-border bg-background px-4 py-4"

@@ -1,7 +1,7 @@
 import { InvoicePreviewList } from "@/components/invoices/invoice-preview-list";
 import { InvoiceReadinessCard } from "@/components/invoices/invoice-readiness-card";
 import { requireOrgRouteContext } from "@/lib/api/route-guard";
-import { getInvoiceModuleReadiness } from "@/lib/domain/invoices";
+import { getInvoiceModuleReadiness, listPersistedInvoices } from "@/lib/domain/invoices";
 
 export default async function WorkspaceInvoicesPage({
   params,
@@ -13,7 +13,10 @@ export default async function WorkspaceInvoicesPage({
     orgSlug,
     permission: "invoices:view",
   });
-  const readiness = await getInvoiceModuleReadiness(context.organization.id);
+  const [readiness, persistedInvoices] = await Promise.all([
+    getInvoiceModuleReadiness(context.organization.id),
+    listPersistedInvoices(context.organization.id),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -26,7 +29,8 @@ export default async function WorkspaceInvoicesPage({
       />
 
       <InvoicePreviewList
-        items={readiness.items}
+        persistedItems={persistedInvoices}
+        previewItems={readiness.items}
         totalCount={readiness.totalCount}
         previewState={readiness.previewState}
       />
