@@ -26,12 +26,34 @@ What is not yet a real shipped module:
 - project contacts workflow
 - internal member/invite management UI
 - compliance documents
-- invoice visibility and follow-up state
+- invoice persistence and follow-up state
 - crew scheduling
 - materials tracking
 - Dayboard
 - marketplace
 - GC portal
+
+## Invoice Readiness State
+
+The workspace now has an invoice-readiness surface at `/workspace/[orgSlug]/invoices`.
+
+That surface can show:
+
+- QuickBooks connection state
+- integration status
+- token expiry
+- last sync timestamp if present
+- an optional read-only QuickBooks preview when a connected workspace can safely hydrate it live
+
+It does not yet provide durable invoice visibility or follow-up workflows.
+
+The minimum shared contract for real invoice sync is:
+
+- a canonical invoice table keyed by `organization_id` plus external invoice id
+- QuickBooks sync cursor and job ownership
+- stored customer, amount, balance, due date, and accounting status
+- stored internal follow-up status and notes
+- stored share state and GC acknowledgement state
 
 ## Shared Platform Contract
 
