@@ -38,7 +38,7 @@ async function main() {
     data: {
       slug: organizationSlug,
       name: 'Atlas Drywall',
-      status: 'active',
+      status: 'ACTIVE',
       planTier: 'trial',
     },
   })
@@ -49,8 +49,8 @@ async function main() {
       email: 'ops@atlasdrywall.com',
       firstName: 'Avery',
       lastName: 'Lopez',
-      actorKind: 'internal',
-      status: 'active',
+      actorKind: 'INTERNAL',
+      status: 'ACTIVE',
     },
   })
 
@@ -58,8 +58,8 @@ async function main() {
     data: {
       organizationId: organization.id,
       userId: owner.id,
-      role: 'owner',
-      status: 'active',
+      role: 'ADMIN',
+      status: 'ACTIVE',
     },
   })
 
@@ -119,8 +119,8 @@ async function main() {
       email: 'jane@westbuild.example',
       firstName: 'Jane',
       lastName: 'Kim',
-      actorKind: 'gc',
-      status: 'active',
+      actorKind: 'GC',
+      status: 'ACTIVE',
     },
   })
 
@@ -128,8 +128,8 @@ async function main() {
     data: {
       gcCompanyId: gcCompany.id,
       userId: gcUser.id,
-      role: 'member',
-      status: 'active',
+      role: 'MEMBER',
+      status: 'ACTIVE',
     },
   })
 
@@ -139,8 +139,8 @@ async function main() {
       gcCompanyId: gcCompany.id,
       name: 'Riverside Tower TI',
       slug: 'riverside-tower-ti',
-      status: 'active',
-      source: 'repeat_gc',
+      status: 'ACTIVE',
+      source: 'REPEAT_GC',
       projectAddress: '123 Main St',
       city: 'San Diego',
       state: 'CA',
@@ -179,7 +179,7 @@ async function main() {
         inviteType: 'internal',
         email: 'pm@atlasdrywall.com',
         organizationId: organization.id,
-        roleOrPermission: 'manager',
+        roleOrPermission: 'MANAGER',
         tokenHash: `internal-${organizationSlug}-${randomUUID()}`,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         createdByUserId: owner.id,
@@ -189,7 +189,7 @@ async function main() {
         email: 'jane@westbuild.example',
         organizationId: organization.id,
         gcCompanyId: gcCompany.id,
-        roleOrPermission: 'view',
+        roleOrPermission: 'VIEW',
         tokenHash: `gc-${organizationSlug}-${randomUUID()}`,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         createdByUserId: owner.id,
@@ -200,11 +200,11 @@ async function main() {
   const accessGrant = await prisma.accessGrant.create({
     data: {
       organizationId: organization.id,
-      subjectType: 'gc_company',
+      subjectType: 'GC_COMPANY',
       subjectId: gcCompany.id,
-      resourceType: 'project',
+      resourceType: 'PROJECT',
       resourceId: project.id,
-      permission: 'view',
+      permission: 'VIEW',
       grantedByUserId: owner.id,
     },
   })
@@ -242,11 +242,11 @@ async function main() {
         entityId: accessGrant.id,
         action: 'access_grant.created',
         metadata: {
-          subjectType: 'gc_company',
+          subjectType: 'GC_COMPANY',
           subjectId: gcCompany.id,
-          resourceType: 'project',
+          resourceType: 'PROJECT',
           resourceId: project.id,
-          permission: 'view',
+          permission: 'VIEW',
         },
       },
     ],

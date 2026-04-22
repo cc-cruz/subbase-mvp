@@ -1,16 +1,41 @@
 import "server-only";
 
 import { prisma } from "@/lib/db/client";
-import { getPermissionsForRole, type OrganizationRole } from "@/lib/auth/roles";
+import { asOrganizationRole, getPermissionsForRole, type OrganizationRole } from "@/lib/auth/roles";
 
 export type AccessGrantResourceType = "PROJECT" | "DOCUMENT" | "INVOICE";
 export type AccessGrantPermission = "VIEW" | "STATUS_UPDATE";
 
+const activeStatusFilter = {
+  equals: "active",
+  mode: "insensitive" as const,
+};
+
+function normalizeEnumLikeValue(value: string) {
+  return value.trim().replace(/[\s-]+/g, "_").toUpperCase();
+}
+
+function normalizeMembershipRecord<T extends { role: string; status: string }>(membership: T) {
+  return {
+    ...membership,
+    role: asOrganizationRole(membership.role),
+    status: normalizeEnumLikeValue(membership.status),
+  };
+}
+
+function normalizeGcMembershipRecord<T extends { role: string; status: string }>(membership: T) {
+  return {
+    ...membership,
+    role: normalizeEnumLikeValue(membership.role),
+    status: normalizeEnumLikeValue(membership.status),
+  };
+}
+
 export async function getActiveMembershipsForUser(userId: string) {
-  return prisma.organizationMembership.findMany({
+  const memberships = await prisma.organizationMembership.findMany({
     where: {
       userId,
-      status: "ACTIVE",
+      status: activeStatusFilter,
     },
     include: {
       organization: true,
@@ -21,6 +46,8 @@ export async function getActiveMembershipsForUser(userId: string) {
       },
     },
   });
+
+  return memberships.map(normalizeMembershipRecord);
 }
 
 export async function getActiveMembershipForOrganization({
@@ -30,10 +57,10 @@ export async function getActiveMembershipForOrganization({
   userId: string;
   orgSlug: string;
 }) {
-  return prisma.organizationMembership.findFirst({
+  const membership = await prisma.organizationMembership.findFirst({
     where: {
       userId,
-      status: "ACTIVE",
+      status: activeStatusFilter,
       organization: {
         slug: orgSlug,
       },
@@ -42,13 +69,15 @@ export async function getActiveMembershipForOrganization({
       organization: true,
     },
   });
+
+  return membership ? normalizeMembershipRecord(membership) : null;
 }
 
 export async function getDefaultWorkspaceSlug(userId: string) {
   const membership = await prisma.organizationMembership.findFirst({
     where: {
       userId,
-      status: "ACTIVE",
+      status: activeStatusFilter,
     },
     include: {
       organization: true,
@@ -62,15 +91,17 @@ export async function getDefaultWorkspaceSlug(userId: string) {
 }
 
 export async function getGcCompanyAffiliations(userId: string) {
-  return prisma.gcCompanyMembership.findMany({
+  const affiliations = await prisma.gcCompanyMembership.findMany({
     where: {
       userId,
-      status: "ACTIVE",
+      status: activeStatusFilter,
     },
     include: {
       gcCompany: true,
     },
   });
+
+  return affiliations.map(normalizeGcMembershipRecord);
 }
 
 export async function hasAccessGrant({
@@ -93,22 +124,36 @@ export async function hasAccessGrant({
   const grant = await prisma.accessGrant.findFirst({
     where: {
       organizationId,
-      resourceType,
+      resourceType: {
+        equals: resourceType,
+        mode: "insensitive",
+      },
       resourceId,
-      permission,
+      permission: {
+        equals: permission,
+        mode: "insensitive",
+      },
       revokedAt: null,
-      OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
       AND: [
+        {
+          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+        },
         {
           OR: [
             {
-              subjectType: "USER",
+              subjectType: {
+                equals: "user",
+                mode: "insensitive",
+              },
               subjectId: userId,
             },
             ...(gcCompanyIds.length > 0
               ? [
                   {
-                    subjectType: "GC_COMPANY" as const,
+                    subjectType: {
+                      equals: "gc_company",
+                      mode: "insensitive" as const,
+                    },
                     subjectId: { in: gcCompanyIds },
                   },
                 ]

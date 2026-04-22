@@ -8,7 +8,10 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { label: "Overview", path: "" },
   { label: "Projects", path: "/projects" },
+  { label: "Compliance", path: "/compliance" },
+  { label: "Invoices", path: "/invoices" },
   { label: "Company", path: "/settings/company" },
+  { label: "Members", path: "/settings/members" },
 ] as const;
 
 export function WorkspaceSidebar({
@@ -29,7 +32,7 @@ export function WorkspaceSidebar({
           </p>
           <h2 className="text-xl font-semibold">{organizationName}</h2>
           <p className="text-sm text-muted-foreground">
-            Internal operating surface for projects, crews, materials, and docs.
+            Internal operating surface for projects, docs, people, and follow-up work.
           </p>
         </div>
 
