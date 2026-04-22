@@ -1,5 +1,6 @@
 import { InvoicePreviewList } from "@/components/invoices/invoice-preview-list";
 import { InvoiceReadinessCard } from "@/components/invoices/invoice-readiness-card";
+import { InvoiceSyncButton } from "@/components/invoices/invoice-sync-button";
 import { requireOrgRouteContext } from "@/lib/api/route-guard";
 import { getInvoiceModuleReadiness, listPersistedInvoices } from "@/lib/domain/invoices";
 
@@ -27,6 +28,12 @@ export default async function WorkspaceInvoicesPage({
         previewError={readiness.previewError}
         dependencyForRealSync={readiness.dependencyForRealSync}
       />
+
+      {context.permissions.includes("invoices:manage") ? (
+        <div className="flex justify-end">
+          <InvoiceSyncButton orgSlug={orgSlug} />
+        </div>
+      ) : null}
 
       <InvoicePreviewList
         persistedItems={persistedInvoices}
