@@ -1,15 +1,18 @@
 import "server-only";
 
+import type { Prisma } from "@prisma/client";
+
 import { getQuickBooksAccessToken, getQuickBooksIntegration } from "@/lib/domain/integrations/quickbooks";
+import { prisma } from "@/lib/db/client";
 import { getEnv } from "@/lib/env";
 import { getQuickBooksApiBaseUrl } from "@/lib/integrations/quickbooks/constants";
 
 export const invoicePreviewLimit = 25;
 
 export const realInvoiceSyncDependency =
-  "Reserve a canonical invoice record contract: a shared invoice table keyed by organization plus external invoice id, sync cursor/job ownership, and canonical fields for customer, amount, balance, due date, accounting status, follow-up state, share state, and GC acknowledgement state.";
+  "Wire a durable invoice sync job: fetch QuickBooks invoices into the canonical invoice table, persist follow-up state, and expose share/GC acknowledgement actions against saved SubBase invoice ids.";
 
-type QuickBooksInvoicePayload = {
+export type QuickBooksInvoicePayload = {
   Id?: string;
   DocNumber?: string;
   TxnDate?: string;
@@ -31,7 +34,7 @@ type QuickBooksInvoicePayload = {
   };
 };
 
-type QuickBooksInvoiceQueryResponse = {
+export type QuickBooksInvoiceQueryResponse = {
   QueryResponse?: {
     Invoice?: QuickBooksInvoicePayload[];
     startPosition?: number;
@@ -60,6 +63,42 @@ export type ReadOnlyInvoicePreviewItem = {
   note: string | null;
 };
 
+const persistedInvoiceSelect = {
+  id: true,
+  externalInvoiceId: true,
+  invoiceNumber: true,
+  customerName: true,
+  txnDate: true,
+  dueDate: true,
+  totalAmount: true,
+  balanceAmount: true,
+  currency: true,
+  accountingStatus: true,
+  followUpStatus: true,
+  gcStatus: true,
+  privateNote: true,
+  quickBooksUpdatedAt: true,
+  lastSyncedAt: true,
+} satisfies Prisma.InvoiceSelect;
+
+export type PersistedInvoiceListItem = {
+  id: string;
+  externalId: string;
+  invoiceNumber: string;
+  customerName: string;
+  txnDate: string | null;
+  dueDate: string | null;
+  totalAmount: number;
+  balance: number;
+  currency: string;
+  statusLabel: ReadOnlyInvoicePreviewItem["statusLabel"];
+  followUpStatus: string;
+  gcStatus: string;
+  quickBooksUpdatedAt: string | null;
+  lastSyncedAt: string;
+  note: string | null;
+};
+
 export type InvoiceModuleReadiness = {
   quickBooks: {
     connected: boolean;
@@ -82,7 +121,7 @@ export type InvoiceModuleReadiness = {
   dependencyForRealSync: string;
 };
 
-function asNumber(value: number | string | undefined) {
+export function asNumber(value: number | string | undefined) {
   if (typeof value === "number") {
     return Number.isFinite(value) ? value : 0;
   }
@@ -95,10 +134,13 @@ function asNumber(value: number | string | undefined) {
   return 0;
 }
 
-function deriveStatusLabel(invoice: QuickBooksInvoicePayload): ReadOnlyInvoicePreviewItem["statusLabel"] {
-  const totalAmount = asNumber(invoice.TotalAmt);
-  const balance = asNumber(invoice.Balance);
-
+export function deriveInvoiceStatusLabel({
+  totalAmount,
+  balance,
+}: {
+  totalAmount: number;
+  balance: number;
+}): ReadOnlyInvoicePreviewItem["statusLabel"] {
   if (balance <= 0) {
     return "paid";
   }
@@ -110,7 +152,45 @@ function deriveStatusLabel(invoice: QuickBooksInvoicePayload): ReadOnlyInvoicePr
   return "open";
 }
 
-function buildQuickBooksInvoicePreviewItem(
+export function deriveQuickBooksInvoiceStatusLabel(
+  invoice: QuickBooksInvoicePayload,
+): ReadOnlyInvoicePreviewItem["statusLabel"] {
+  const totalAmount = asNumber(invoice.TotalAmt);
+  const balance = asNumber(invoice.Balance);
+
+  return deriveInvoiceStatusLabel({ totalAmount, balance });
+}
+
+function serializeDateOnly(value: Date | null) {
+  return value ? value.toISOString().slice(0, 10) : null;
+}
+
+function buildPersistedInvoiceListItem(
+  invoice: Prisma.InvoiceGetPayload<{ select: typeof persistedInvoiceSelect }>,
+): PersistedInvoiceListItem {
+  const totalAmount = invoice.totalAmount.toNumber();
+  const balance = invoice.balanceAmount.toNumber();
+
+  return {
+    id: invoice.id,
+    externalId: invoice.externalInvoiceId,
+    invoiceNumber: invoice.invoiceNumber,
+    customerName: invoice.customerName,
+    txnDate: serializeDateOnly(invoice.txnDate),
+    dueDate: serializeDateOnly(invoice.dueDate),
+    totalAmount,
+    balance,
+    currency: invoice.currency,
+    statusLabel: deriveInvoiceStatusLabel({ totalAmount, balance }),
+    followUpStatus: invoice.followUpStatus,
+    gcStatus: invoice.gcStatus,
+    quickBooksUpdatedAt: invoice.quickBooksUpdatedAt?.toISOString() ?? null,
+    lastSyncedAt: invoice.lastSyncedAt.toISOString(),
+    note: invoice.privateNote,
+  };
+}
+
+export function buildQuickBooksInvoicePreviewItem(
   invoice: QuickBooksInvoicePayload,
 ): ReadOnlyInvoicePreviewItem | null {
   const externalId = invoice.Id?.trim();
@@ -128,16 +208,22 @@ function buildQuickBooksInvoicePreviewItem(
     totalAmount: asNumber(invoice.TotalAmt),
     balance: asNumber(invoice.Balance),
     currency: invoice.CurrencyRef?.name?.trim() || "USD",
-    statusLabel: deriveStatusLabel(invoice),
+    statusLabel: deriveQuickBooksInvoiceStatusLabel(invoice),
     quickBooksUpdatedAt:
       invoice.MetaData?.LastUpdatedTime ?? invoice.MetaData?.CreateTime ?? null,
     note: invoice.PrivateNote?.trim() || null,
   };
 }
 
-async function fetchQuickBooksInvoicePreview(organizationId: string) {
+export async function fetchQuickBooksInvoices({
+  organizationId,
+  limit = invoicePreviewLimit,
+}: {
+  organizationId: string;
+  limit?: number;
+}) {
   const { accessToken, realmId } = await getQuickBooksAccessToken(organizationId);
-  const query = `SELECT * FROM Invoice STARTPOSITION 1 MAXRESULTS ${invoicePreviewLimit}`;
+  const query = `SELECT * FROM Invoice STARTPOSITION 1 MAXRESULTS ${limit}`;
   const requestUrl = new URL(
     `${getQuickBooksApiBaseUrl(getEnv().INTUIT_ENVIRONMENT)}/company/${realmId}/query`,
   );
@@ -162,7 +248,8 @@ async function fetchQuickBooksInvoicePreview(organizationId: string) {
     throw new Error(quickBooksError);
   }
 
-  const items = (payload.QueryResponse?.Invoice ?? [])
+  const invoices = payload.QueryResponse?.Invoice ?? [];
+  const items = invoices
     .map(buildQuickBooksInvoicePreviewItem)
     .filter((item): item is ReadOnlyInvoicePreviewItem => item !== null)
     .sort((left, right) => {
@@ -174,8 +261,19 @@ async function fetchQuickBooksInvoicePreview(organizationId: string) {
 
   return {
     items,
+    invoices,
     totalCount: payload.QueryResponse?.totalCount ?? items.length,
   };
+}
+
+export async function listPersistedInvoices(organizationId: string) {
+  const invoices = await prisma.invoice.findMany({
+    where: { organizationId },
+    select: persistedInvoiceSelect,
+    orderBy: [{ dueDate: "asc" }, { txnDate: "asc" }, { invoiceNumber: "asc" }],
+  });
+
+  return invoices.map(buildPersistedInvoiceListItem);
 }
 
 export async function getInvoiceModuleReadiness(
@@ -239,7 +337,7 @@ export async function getInvoiceModuleReadiness(
   }
 
   try {
-    const preview = await fetchQuickBooksInvoicePreview(organizationId);
+    const preview = await fetchQuickBooksInvoices({ organizationId });
 
     return {
       quickBooks,
