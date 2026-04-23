@@ -18,6 +18,7 @@ export default async function WorkspaceInvoicesPage({
     getInvoiceModuleReadiness(context.organization.id),
     listPersistedInvoices(context.organization.id),
   ]);
+  const canManageInvoices = context.permissions.includes("invoices:manage");
 
   return (
     <div className="space-y-6">
@@ -29,13 +30,15 @@ export default async function WorkspaceInvoicesPage({
         dependencyForRealSync={readiness.dependencyForRealSync}
       />
 
-      {context.permissions.includes("invoices:manage") ? (
+      {canManageInvoices ? (
         <div className="flex justify-end">
           <InvoiceSyncButton orgSlug={orgSlug} />
         </div>
       ) : null}
 
       <InvoicePreviewList
+        canManageInvoices={canManageInvoices}
+        orgSlug={orgSlug}
         persistedItems={persistedInvoices}
         previewItems={readiness.items}
         totalCount={readiness.totalCount}

@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { InvoiceFollowUpControls } from "@/components/invoices/invoice-follow-up-controls";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/workspace/empty-state";
 import type {
@@ -37,6 +38,8 @@ const statusLabelMap: Record<ReadOnlyInvoicePreviewItem["statusLabel"], string> 
 };
 
 type InvoicePreviewListProps = {
+  canManageInvoices: boolean;
+  orgSlug: string;
   persistedItems: PersistedInvoiceListItem[];
   previewItems: ReadOnlyInvoicePreviewItem[];
   totalCount: number | null;
@@ -49,6 +52,8 @@ type InvoicePreviewListProps = {
 };
 
 export function InvoicePreviewList({
+  canManageInvoices,
+  orgSlug,
   persistedItems,
   previewItems,
   totalCount,
@@ -117,6 +122,14 @@ export function InvoicePreviewList({
                     </div>
                   </div>
                 </div>
+
+                {canManageInvoices ? (
+                  <InvoiceFollowUpControls
+                    orgSlug={orgSlug}
+                    invoiceId={invoice.id}
+                    initialFollowUpStatus={invoice.followUpStatus}
+                  />
+                ) : null}
               </div>
             ))}
           </div>
