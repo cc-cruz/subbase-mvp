@@ -7,49 +7,52 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(uuid()) @db.Uuid
-  authUserId  String   @unique @map("auth_user_id")
-  email       String   @unique
-  firstName   String?  @map("first_name")
-  lastName    String?  @map("last_name")
-  actorKind   String   @default("internal") @map("actor_kind")
-  status      String   @default("active")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id         String   @id @default(uuid()) @db.Uuid
+  authUserId String   @unique @map("auth_user_id")
+  email      String   @unique
+  firstName  String?  @map("first_name")
+  lastName   String?  @map("last_name")
+  actorKind  String   @default("internal") @map("actor_kind")
+  status     String   @default("active")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  organizationMemberships OrganizationMembership[] @relation("OrganizationMembershipUser")
+  organizationMemberships        OrganizationMembership[] @relation("OrganizationMembershipUser")
   invitedOrganizationMemberships OrganizationMembership[] @relation("OrganizationMembershipInvitedBy")
-  gcCompanyMemberships    GcCompanyMembership[]
-  createdInvitations      Invitation[]             @relation("InvitationCreatedBy")
-  acceptedInvitations     Invitation[]             @relation("InvitationAcceptedBy")
-  uploadedFiles           File[]
-  createdFileAttachments  FileAttachment[]         @relation("FileAttachmentCreatedBy")
-  grantedAccess           AccessGrant[]            @relation("AccessGrantCreatedBy")
+  gcCompanyMemberships           GcCompanyMembership[]
+  createdInvitations             Invitation[]             @relation("InvitationCreatedBy")
+  acceptedInvitations            Invitation[]             @relation("InvitationAcceptedBy")
+  uploadedFiles                  File[]
+  createdFileAttachments         FileAttachment[]         @relation("FileAttachmentCreatedBy")
+  grantedAccess                  AccessGrant[]            @relation("AccessGrantCreatedBy")
+  invoiceFollowUpNotes           InvoiceFollowUpNote[]
 
   @@map("users")
 }
 
 model Organization {
-  id         String   @id @default(uuid()) @db.Uuid
-  slug       String   @unique
-  name       String
-  status     String   @default("active")
-  planTier   String   @default("trial") @map("plan_tier")
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id        String   @id @default(uuid()) @db.Uuid
+  slug      String   @unique
+  name      String
+  status    String   @default("active")
+  planTier  String   @default("trial") @map("plan_tier")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  memberships      OrganizationMembership[]
-  companyProfile   CompanyProfile?
-  companyTrades    CompanyTrade[]
-  gcCompanies      GcCompany[]
-  projects         Project[]
-  subscriptions    Subscription[]
-  integrations     OrganizationIntegration[]
-  invitations      Invitation[]
-  accessGrants     AccessGrant[]
-  files            File[]
-  fileAttachments  FileAttachment[]
-  activityLogs     ActivityLog[]
+  memberships          OrganizationMembership[]
+  companyProfile       CompanyProfile?
+  companyTrades        CompanyTrade[]
+  gcCompanies          GcCompany[]
+  projects             Project[]
+  subscriptions        Subscription[]
+  integrations         OrganizationIntegration[]
+  invitations          Invitation[]
+  accessGrants         AccessGrant[]
+  invoices             Invoice[]
+  invoiceFollowUpNotes InvoiceFollowUpNote[]
+  files                File[]
+  fileAttachments      FileAttachment[]
+  activityLogs         ActivityLog[]
 
   @@map("organizations")
 }
@@ -86,6 +89,7 @@ model GcCompany {
   organization Organization?         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   memberships  GcCompanyMembership[]
   projects     Project[]
+  invoices     Invoice[]
   invitations  Invitation[]
 
   @@index([organizationId])
@@ -126,10 +130,10 @@ model Invitation {
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  gcCompany     GcCompany?   @relation(fields: [gcCompanyId], references: [id], onDelete: SetNull)
-  createdByUser  User        @relation("InvitationCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
-  acceptedByUser User?       @relation("InvitationAcceptedBy", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  gcCompany      GcCompany?   @relation(fields: [gcCompanyId], references: [id], onDelete: SetNull)
+  createdByUser  User         @relation("InvitationCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  acceptedByUser User?        @relation("InvitationAcceptedBy", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, email])
   @@index([gcCompanyId, email])
@@ -159,10 +163,10 @@ model CompanyProfile {
 }
 
 model CompanyTrade {
-  id             String   @id @default(uuid()) @db.Uuid
-  organizationId String   @map("organization_id") @db.Uuid
-  tradeCode      String   @map("trade_code")
-  tradeName      String   @map("trade_name")
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  tradeCode      String @map("trade_code")
+  tradeName      String @map("trade_name")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -188,10 +192,11 @@ model Project {
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  gcCompany    GcCompany?   @relation(fields: [gcCompanyId], references: [id], onDelete: SetNull)
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  gcCompany    GcCompany?       @relation(fields: [gcCompanyId], references: [id], onDelete: SetNull)
   contacts     ProjectContact[]
-  accessGrants  AccessGrant[]
+  invoices     Invoice[]
+  accessGrants AccessGrant[]
 
   @@unique([organizationId, slug])
   @@index([organizationId, status])
@@ -228,9 +233,9 @@ model File {
   uploadedByUserId String   @map("uploaded_by_user_id") @db.Uuid
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  uploadedByUser User         @relation(fields: [uploadedByUserId], references: [id])
-  attachments   FileAttachment[]
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedByUser User             @relation(fields: [uploadedByUserId], references: [id])
+  attachments    FileAttachment[]
 
   @@index([organizationId, bucket])
   @@map("files")
@@ -247,8 +252,8 @@ model FileAttachment {
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  file          File          @relation(fields: [fileId], references: [id], onDelete: Cascade)
-  createdByUser User          @relation("FileAttachmentCreatedBy", fields: [createdByUserId], references: [id])
+  file          File         @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  createdByUser User         @relation("FileAttachmentCreatedBy", fields: [createdByUserId], references: [id])
 
   @@index([organizationId, entityType, entityId])
   @@index([fileId])
@@ -277,6 +282,63 @@ model AccessGrant {
   @@index([organizationId, resourceType, resourceId])
   @@index([projectId])
   @@map("access_grants")
+}
+
+model Invoice {
+  id                  String    @id @default(uuid()) @db.Uuid
+  organizationId      String    @map("organization_id") @db.Uuid
+  projectId           String?   @map("project_id") @db.Uuid
+  gcCompanyId         String?   @map("gc_company_id") @db.Uuid
+  externalProvider    String    @default("quickbooks_online") @map("external_provider")
+  externalInvoiceId   String    @map("external_invoice_id")
+  invoiceNumber       String    @map("invoice_number")
+  customerExternalId  String?   @map("customer_external_id")
+  customerName        String    @map("customer_name")
+  currency            String    @default("USD")
+  totalAmount         Decimal   @default(0) @map("total_amount") @db.Decimal(14, 2)
+  balanceAmount       Decimal   @default(0) @map("balance_amount") @db.Decimal(14, 2)
+  txnDate             DateTime? @map("txn_date") @db.Date
+  dueDate             DateTime? @map("due_date") @db.Date
+  accountingStatus    String    @default("unknown") @map("accounting_status")
+  followUpStatus      String    @default("none") @map("follow_up_status")
+  gcStatus            String    @default("unknown") @map("gc_status")
+  privateNote         String?   @map("private_note")
+  quickBooksUpdatedAt DateTime? @map("quickbooks_updated_at") @db.Timestamptz(6)
+  lastSyncedAt        DateTime  @default(now()) @map("last_synced_at") @db.Timestamptz(6)
+  rawJson             Json?     @map("raw_json")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization  Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project       Project?              @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  gcCompany     GcCompany?            @relation(fields: [gcCompanyId], references: [id], onDelete: SetNull)
+  followUpNotes InvoiceFollowUpNote[]
+
+  @@unique([organizationId, externalProvider, externalInvoiceId])
+  @@index([organizationId, accountingStatus])
+  @@index([organizationId, followUpStatus])
+  @@index([organizationId, dueDate])
+  @@index([projectId])
+  @@index([gcCompanyId])
+  @@map("invoices")
+}
+
+model InvoiceFollowUpNote {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  invoiceId      String   @map("invoice_id") @db.Uuid
+  authorUserId   String   @map("author_user_id") @db.Uuid
+  note           String
+  followUpStatus String?  @map("follow_up_status")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoice      Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  authorUser   User         @relation(fields: [authorUserId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([invoiceId, createdAt])
+  @@map("invoice_follow_up_notes")
 }
 
 model Subscription {

@@ -1,7 +1,8 @@
 import { InvoicePreviewList } from "@/components/invoices/invoice-preview-list";
 import { InvoiceReadinessCard } from "@/components/invoices/invoice-readiness-card";
+import { InvoiceSyncButton } from "@/components/invoices/invoice-sync-button";
 import { requireOrgRouteContext } from "@/lib/api/route-guard";
-import { getInvoiceModuleReadiness } from "@/lib/domain/invoices";
+import { getInvoiceModuleReadiness, listPersistedInvoices } from "@/lib/domain/invoices";
 
 export default async function WorkspaceInvoicesPage({
   params,
@@ -13,7 +14,11 @@ export default async function WorkspaceInvoicesPage({
     orgSlug,
     permission: "invoices:view",
   });
-  const readiness = await getInvoiceModuleReadiness(context.organization.id);
+  const [readiness, persistedInvoices] = await Promise.all([
+    getInvoiceModuleReadiness(context.organization.id),
+    listPersistedInvoices(context.organization.id),
+  ]);
+  const canManageInvoices = context.permissions.includes("invoices:manage");
 
   return (
     <div className="space-y-6">
@@ -25,8 +30,17 @@ export default async function WorkspaceInvoicesPage({
         dependencyForRealSync={readiness.dependencyForRealSync}
       />
 
+      {canManageInvoices ? (
+        <div className="flex justify-end">
+          <InvoiceSyncButton orgSlug={orgSlug} />
+        </div>
+      ) : null}
+
       <InvoicePreviewList
-        items={readiness.items}
+        canManageInvoices={canManageInvoices}
+        orgSlug={orgSlug}
+        persistedItems={persistedInvoices}
+        previewItems={readiness.items}
         totalCount={readiness.totalCount}
         previewState={readiness.previewState}
       />
