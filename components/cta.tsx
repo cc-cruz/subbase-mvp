@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 export function CTA() {
   return (
@@ -17,12 +18,15 @@ export function CTA() {
           </h2>
           <div className="mt-10 flex flex-wrap justify-center gap-4">
             <Button
+              asChild
               size="lg"
               variant="secondary"
               className="gap-2 border-2 border-background"
             >
-              Start Free Trial
-              <ArrowRight className="h-4 w-4" />
+              <Link href="/workspace">
+                Start Free Trial
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </Button>
             <Button
               size="lg"

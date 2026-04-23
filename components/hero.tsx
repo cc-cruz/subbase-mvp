@@ -10,6 +10,7 @@ import {
   Package,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 const HERO_STATES = [
@@ -191,10 +192,10 @@ function HeroVisual() {
   const { ref, reduceMotion, step } = useHeroSequence({ enabled: true });
   const effectiveStep = reduceMotion ? HERO_STATES.length - 1 : step;
   const state = HERO_STATES[effectiveStep];
-  const isCrewFocus = step === 0;
-  const isMaterialsFocus = step === 1;
-  const isPaymentsFocus = step === 2;
-  const isReadyFocus = step === 3;
+  const isCrewFocus = effectiveStep === 0;
+  const isMaterialsFocus = effectiveStep === 1;
+  const isPaymentsFocus = effectiveStep === 2;
+  const isReadyFocus = effectiveStep === 3;
 
   return (
     <div className="relative mx-auto w-full max-w-[35.5rem] lg:ml-auto">
@@ -231,25 +232,19 @@ function HeroVisual() {
         <div className="relative mt-3 grid gap-2.5 sm:grid-cols-3">
           <div
             className={cn(
-              "border-2 border-border bg-background p-3 transition-transform duration-300",
+              "flex min-h-[11.5rem] flex-col border-2 border-border bg-background p-3 transition-transform duration-300",
               (isCrewFocus || isReadyFocus) && !reduceMotion
                 ? "-translate-y-1"
                 : "translate-y-0",
             )}
           >
             <div className="flex items-start justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center border-2 border-border bg-secondary text-secondary-foreground">
-                  <Users className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold">Crew Scheduling</p>
-                  <p className="text-xs leading-5 text-muted-foreground">12 assigned</p>
-                </div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center border-2 border-border bg-secondary text-secondary-foreground">
+                <Users className="h-4 w-4" />
               </div>
               <span
                 className={cn(
-                  "max-w-[6.25rem] shrink-0 border-2 border-border px-2 py-1 text-right font-mono text-[10px] font-bold uppercase tracking-[0.12em]",
+                  "min-h-7 max-w-[6.75rem] shrink-0 border-2 border-border px-2 py-1 text-center font-mono text-[9px] font-bold uppercase leading-3 tracking-[0.1em]",
                   isCrewFocus || isReadyFocus
                     ? "bg-secondary text-secondary-foreground"
                     : "bg-muted text-muted-foreground",
@@ -258,38 +253,38 @@ function HeroVisual() {
                 {state.crewStatus}
               </span>
             </div>
-            <p className="mt-3 text-xs leading-5 text-muted-foreground">
+            <div className="mt-2 min-w-0">
+              <p className="text-sm font-bold leading-5">Crew Scheduling</p>
+              <p className="text-xs leading-5 text-muted-foreground">12 assigned</p>
+            </div>
+            <p className="mt-2 min-h-[2.5rem] text-xs leading-5 text-muted-foreground">
               {state.crewNote}
             </p>
-            <div className="mt-3 h-3 overflow-hidden border-2 border-border bg-muted">
-              <div
-                className="h-full bg-secondary transition-[width] duration-500"
-                style={{ width: state.crewWidth }}
-              />
+            <div className="mt-auto pt-3">
+              <div className="h-3 overflow-hidden border-2 border-border bg-muted">
+                <div
+                  className="h-full bg-secondary transition-[width] duration-500"
+                  style={{ width: state.crewWidth }}
+                />
+              </div>
             </div>
           </div>
 
           <div
             className={cn(
-              "border-2 border-border bg-background p-3 transition-transform duration-300",
+              "flex min-h-[11.5rem] flex-col border-2 border-border bg-background p-3 transition-transform duration-300",
               (isMaterialsFocus || isReadyFocus) && !reduceMotion
                 ? "-translate-y-1"
                 : "translate-y-0",
             )}
           >
             <div className="flex items-start justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center border-2 border-border bg-accent text-accent-foreground">
-                  <Package className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold">Materials Tracking</p>
-                  <p className="text-xs leading-5 text-muted-foreground">3 due today</p>
-                </div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center border-2 border-border bg-accent text-accent-foreground">
+                <Package className="h-4 w-4" />
               </div>
               <span
                 className={cn(
-                  "max-w-[6.25rem] shrink-0 border-2 border-border px-2 py-1 text-right font-mono text-[10px] font-bold uppercase tracking-[0.12em]",
+                  "min-h-7 max-w-[6.75rem] shrink-0 border-2 border-border px-2 py-1 text-center font-mono text-[9px] font-bold uppercase leading-3 tracking-[0.1em]",
                   isMaterialsFocus || isReadyFocus
                     ? "bg-accent text-accent-foreground"
                     : "bg-muted text-muted-foreground",
@@ -298,38 +293,38 @@ function HeroVisual() {
                 {state.materialsStatus}
               </span>
             </div>
-            <p className="mt-3 text-xs leading-5 text-muted-foreground">
+            <div className="mt-2 min-w-0">
+              <p className="text-sm font-bold leading-5">Materials Tracking</p>
+              <p className="text-xs leading-5 text-muted-foreground">3 due today</p>
+            </div>
+            <p className="mt-2 min-h-[2.5rem] text-xs leading-5 text-muted-foreground">
               {state.materialsNote}
             </p>
-            <div className="mt-3 h-3 overflow-hidden border-2 border-border bg-muted">
-              <div
-                className="h-full bg-accent transition-[width] duration-500"
-                style={{ width: state.materialsWidth }}
-              />
+            <div className="mt-auto pt-3">
+              <div className="h-3 overflow-hidden border-2 border-border bg-muted">
+                <div
+                  className="h-full bg-accent transition-[width] duration-500"
+                  style={{ width: state.materialsWidth }}
+                />
+              </div>
             </div>
           </div>
 
           <div
             className={cn(
-              "border-2 border-border bg-background p-3 transition-transform duration-300",
+              "flex min-h-[11.5rem] flex-col border-2 border-border bg-background p-3 transition-transform duration-300",
               (isPaymentsFocus || isReadyFocus) && !reduceMotion
                 ? "-translate-y-1"
                 : "translate-y-0",
             )}
           >
             <div className="flex items-start justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center border-2 border-border bg-primary text-primary-foreground">
-                  <CreditCard className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold">Payment Visibility</p>
-                  <p className="text-xs leading-5 text-muted-foreground">$47.2K pending</p>
-                </div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center border-2 border-border bg-primary text-primary-foreground">
+                <CreditCard className="h-4 w-4" />
               </div>
               <span
                 className={cn(
-                  "max-w-[6.75rem] shrink-0 border-2 border-border px-2 py-1 text-right font-mono text-[10px] font-bold uppercase tracking-[0.12em]",
+                  "min-h-7 max-w-[7rem] shrink-0 border-2 border-border px-2 py-1 text-center font-mono text-[9px] font-bold uppercase leading-3 tracking-[0.1em]",
                   isPaymentsFocus || isReadyFocus
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted text-muted-foreground",
@@ -338,14 +333,20 @@ function HeroVisual() {
                 {state.paymentStatus}
               </span>
             </div>
-            <p className="mt-3 text-xs leading-5 text-muted-foreground">
+            <div className="mt-2 min-w-0">
+              <p className="text-sm font-bold leading-5">Payment Visibility</p>
+              <p className="text-xs leading-5 text-muted-foreground">$47.2K pending</p>
+            </div>
+            <p className="mt-2 min-h-[2.5rem] text-xs leading-5 text-muted-foreground">
               {state.paymentNote}
             </p>
-            <div className="mt-3 h-3 overflow-hidden border-2 border-border bg-muted">
-              <div
-                className="h-full bg-primary transition-[width] duration-500"
-                style={{ width: state.paymentWidth }}
-              />
+            <div className="mt-auto pt-3">
+              <div className="h-3 overflow-hidden border-2 border-border bg-muted">
+                <div
+                  className="h-full bg-primary transition-[width] duration-500"
+                  style={{ width: state.paymentWidth }}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -386,7 +387,7 @@ function HeroVisual() {
                 <div className="flex items-center justify-between gap-2 border-2 border-border bg-card px-2.5 py-2 text-xs">
                   <span className="font-medium">Crew C • North Lot TI</span>
                   <span className="font-mono uppercase tracking-[0.12em] text-muted-foreground">
-                    {step < 2 ? "Standby" : "Ready next"}
+                    {effectiveStep < 2 ? "Standby" : "Ready next"}
                   </span>
                 </div>
               </div>
@@ -403,7 +404,7 @@ function HeroVisual() {
                   </p>
                 </div>
                 <span className="shrink-0 border-2 border-border bg-muted px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
-                  {step + 1}/4
+                  {effectiveStep + 1}/4
                 </span>
               </div>
 
@@ -420,8 +421,8 @@ function HeroVisual() {
 
               <div className="mt-3 grid grid-cols-4 gap-1.5">
                 {HERO_STEPS.map((label, index) => {
-                  const isActive = index <= step;
-                  const isCurrent = index === step;
+                  const isActive = index <= effectiveStep;
+                  const isCurrent = index === effectiveStep;
 
                   return (
                     <div key={label} className="space-y-1">
@@ -450,7 +451,7 @@ function HeroVisual() {
 
               <div className="mt-3 space-y-1.5">
                 {HERO_FEED_ITEMS.map((item) => {
-                  const isVisible = step >= item.stage;
+                  const isVisible = effectiveStep >= item.stage;
 
                   return (
                     <div
@@ -523,9 +524,11 @@ export function Hero() {
             </div>
 
             <div className="mt-8 flex flex-wrap gap-4">
-              <Button size="lg" className="gap-2">
-                Start Free Trial
-                <ArrowRight className="h-4 w-4" />
+              <Button asChild size="lg" className="gap-2">
+                <Link href="/workspace">
+                  Start Free Trial
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               </Button>
               <Button size="lg" variant="outline">
                 Book a Demo

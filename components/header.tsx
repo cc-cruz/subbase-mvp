@@ -41,10 +41,12 @@ export function Header() {
 
         <div className="hidden items-center gap-3 md:flex">
           <ThemeToggle />
-          <Button variant="outline" size="sm">
-            Log in
+          <Button asChild variant="outline" size="sm">
+            <Link href="/workspace/sign-in">Log in</Link>
           </Button>
-          <Button size="sm">Get Started</Button>
+          <Button asChild size="sm">
+            <Link href="/workspace">Get Started</Link>
+          </Button>
         </div>
 
         <Sheet open={open} onOpenChange={setOpen}>
@@ -67,10 +69,16 @@ export function Header() {
                 </Link>
               ))}
               <div className="mt-4 flex flex-col gap-3">
-                <Button variant="outline" className="w-full">
-                  Log in
+                <Button asChild variant="outline" className="w-full">
+                  <Link href="/workspace/sign-in" onClick={() => setOpen(false)}>
+                    Log in
+                  </Link>
                 </Button>
-                <Button className="w-full">Get Started</Button>
+                <Button asChild className="w-full">
+                  <Link href="/workspace" onClick={() => setOpen(false)}>
+                    Get Started
+                  </Link>
+                </Button>
               </div>
               <div className="mt-4 flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Theme:</span>

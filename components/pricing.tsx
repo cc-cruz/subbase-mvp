@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
+import Link from "next/link";
 
 const plans = [
   {
@@ -110,10 +111,11 @@ export function Pricing() {
                 ))}
               </ul>
               <Button
+                asChild
                 className="w-full"
                 variant={plan.featured ? "default" : "outline"}
               >
-                Start Free Trial
+                <Link href="/workspace">Start Free Trial</Link>
               </Button>
             </div>
           ))}

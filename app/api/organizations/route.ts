@@ -55,6 +55,6 @@ export const POST = withRouteErrorHandling(async (request: Request) => {
   return created({
     organizationId: organization.id,
     organizationSlug: organization.slug,
-    redirectPath: `/workspace/${organization.slug}/settings/company`,
+    redirectPath: `/workspace/${organization.slug}`,
   });
 });
