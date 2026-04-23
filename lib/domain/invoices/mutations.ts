@@ -3,6 +3,7 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db/client";
+import { notFound } from "@/lib/api/errors";
 import {
   asNumber,
   deriveQuickBooksInvoiceStatusLabel,
@@ -11,6 +12,7 @@ import {
   listPersistedInvoices,
   type QuickBooksInvoicePayload,
 } from "@/lib/domain/invoices/queries";
+import type { UpdateInvoiceFollowUpInput } from "@/lib/domain/invoices/schemas";
 import { QUICKBOOKS_PROVIDER } from "@/lib/integrations/quickbooks/constants";
 
 function parseQuickBooksDate(value: string | undefined) {
@@ -141,4 +143,62 @@ export async function syncQuickBooksInvoices({
     syncedCount,
     totalCount: quickBooks.totalCount,
   };
+}
+
+export async function updateInvoiceFollowUp({
+  organizationId,
+  invoiceId,
+  authorUserId,
+  input,
+}: {
+  organizationId: string;
+  invoiceId: string;
+  authorUserId: string;
+  input: UpdateInvoiceFollowUpInput;
+}) {
+  const invoice = await prisma.invoice.findFirst({
+    where: {
+      id: invoiceId,
+      organizationId,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!invoice) {
+    throw notFound("Invoice not found.");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    if (input.followUpStatus !== undefined) {
+      await tx.invoice.update({
+        where: { id: invoice.id },
+        data: {
+          followUpStatus: input.followUpStatus,
+        },
+      });
+    }
+
+    if (input.note) {
+      await tx.invoiceFollowUpNote.create({
+        data: {
+          authorUserId,
+          followUpStatus: input.followUpStatus,
+          invoiceId: invoice.id,
+          note: input.note,
+          organizationId,
+        },
+      });
+    }
+  });
+
+  const updatedInvoices = await listPersistedInvoices(organizationId);
+  const updatedInvoice = updatedInvoices.find((item) => item.id === invoice.id);
+
+  if (!updatedInvoice) {
+    throw notFound("Invoice not found after update.");
+  }
+
+  return updatedInvoice;
 }
