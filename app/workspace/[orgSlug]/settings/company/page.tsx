@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 import { CompanyProfileForm } from "@/components/workspace/company-profile-form";
 import { QuickBooksIntegrationCard } from "@/components/workspace/quickbooks-integration-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +22,7 @@ export default async function WorkspaceCompanySettingsPage({
   const context = await requireOrgRouteContext({
     orgSlug,
     permission: "company_profile:manage",
-  });
+  }).catch(() => redirect("/workspace"));
   const [profile, quickBooksIntegration] = await Promise.all([
     getCompanyProfile(context.organization.id),
     getQuickBooksIntegration(context.organization.id),

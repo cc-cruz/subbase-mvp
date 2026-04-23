@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { ProjectContactManager } from "@/components/projects/project-contact-manager";
 import { ProjectForm } from "@/components/projects/project-form";
@@ -13,7 +13,9 @@ export default async function WorkspaceProjectDetailPage({
   params: Promise<{ orgSlug: string; projectId: string }>;
 }) {
   const { orgSlug, projectId } = await params;
-  const context = await requireOrgRouteContext({ orgSlug });
+  const context = await requireOrgRouteContext({ orgSlug }).catch(() =>
+    redirect("/workspace"),
+  );
   const project = await getProject({
     organizationId: context.organization.id,
     projectId,

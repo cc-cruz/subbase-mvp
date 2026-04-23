@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 import { ProjectForm } from "@/components/projects/project-form";
 import { ProjectList } from "@/components/projects/project-list";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +12,9 @@ export default async function WorkspaceProjectsPage({
   params: Promise<{ orgSlug: string }>;
 }) {
   const { orgSlug } = await params;
-  const context = await requireOrgRouteContext({ orgSlug });
+  const context = await requireOrgRouteContext({ orgSlug }).catch(() =>
+    redirect("/workspace"),
+  );
   const projects = await listProjects(context.organization.id);
 
   return (
