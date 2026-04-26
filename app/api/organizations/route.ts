@@ -3,12 +3,12 @@ import { withRouteErrorHandling } from "@/lib/api/route-guard";
 import { conflict } from "@/lib/api/errors";
 import { requireCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/client";
-import { slugSchema, toSlug } from "@/lib/validation/common";
+import { optionalSlugSchema, toSlug } from "@/lib/validation/common";
 import { z } from "zod";
 
 const createOrganizationSchema = z.object({
   name: z.string().trim().min(2).max(120),
-  slug: slugSchema.optional(),
+  slug: optionalSlugSchema,
 });
 
 export const POST = withRouteErrorHandling(async (request: Request) => {
