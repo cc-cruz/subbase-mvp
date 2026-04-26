@@ -9,6 +9,32 @@ export const slugSchema = z
   .max(64)
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase letters, numbers, and hyphens only.");
 
+export const optionalSlugSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    const trimmedValue = value.trim();
+
+    return trimmedValue.length > 0 ? trimmedValue : undefined;
+  },
+  slugSchema.optional(),
+);
+
+export const optionalDateStringSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    const trimmedValue = value.trim();
+
+    return trimmedValue.length > 0 ? trimmedValue : undefined;
+  },
+  z.string().date().optional(),
+);
+
 export const optionalTextSchema = z.preprocess(
   (value) => (typeof value === "string" ? value.trim() : value),
   z

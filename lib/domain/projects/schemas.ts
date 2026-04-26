@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-import { optionalEmailSchema, optionalTextSchema, slugSchema } from "@/lib/validation/common";
+import {
+  optionalDateStringSchema,
+  optionalEmailSchema,
+  optionalSlugSchema,
+  optionalTextSchema,
+} from "@/lib/validation/common";
 
 export const projectStatusValues = [
   "DRAFT",
@@ -17,7 +22,7 @@ export type ProjectSource = (typeof projectSourceValues)[number];
 
 export const createProjectSchema = z.object({
   name: z.string().trim().min(2).max(140),
-  slug: slugSchema.optional(),
+  slug: optionalSlugSchema,
   status: z.enum(projectStatusValues).default("DRAFT"),
   source: z.enum(projectSourceValues).default("MANUAL"),
   gcCompanyName: optionalTextSchema,
@@ -25,8 +30,8 @@ export const createProjectSchema = z.object({
   city: optionalTextSchema,
   state: optionalTextSchema,
   postalCode: optionalTextSchema,
-  startDate: z.string().date().optional(),
-  endDate: z.string().date().optional(),
+  startDate: optionalDateStringSchema,
+  endDate: optionalDateStringSchema,
   notes: optionalTextSchema,
 });
 
