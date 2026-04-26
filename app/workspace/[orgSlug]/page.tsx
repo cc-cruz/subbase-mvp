@@ -75,7 +75,7 @@ function SetupTaskCard({ task }: { task: SetupCard }) {
   const Icon = task.icon;
 
   return (
-    <Card className="border-4 border-border">
+    <Card className="h-full border-4 border-border">
       <CardHeader className="gap-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center border-2 border-border bg-secondary text-secondary-foreground">
@@ -101,15 +101,15 @@ function SetupTaskCard({ task }: { task: SetupCard }) {
           </CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3 border-t-2 border-border pt-4 sm:flex-row">
-        <Button asChild className="gap-2">
+      <CardContent className="mt-auto grid gap-3 border-t-2 border-border pt-4 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+        <Button asChild className="w-full min-w-0 gap-2">
           <Link href={task.ctaHref}>
             {task.ctaLabel}
             <ArrowRight className="h-4 w-4" />
           </Link>
         </Button>
         {task.secondaryHref && task.secondaryLabel ? (
-          <Button asChild variant="outline">
+          <Button asChild className="w-full min-w-0" variant="outline">
             <Link href={task.secondaryHref}>{task.secondaryLabel}</Link>
           </Button>
         ) : null}
